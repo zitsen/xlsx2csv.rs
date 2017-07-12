@@ -1,6 +1,6 @@
 [package]
 name = "xlsx2csv"
-version = "0.1.0"
+version = "0.1.1-pre"
 authors = ["Huo Linhe <linhehuo@gmail.com>"]
 description = "Excel XLSX to CSV converter"
 license = "MIT/Apache-2.0"
