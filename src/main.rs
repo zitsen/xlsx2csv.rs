@@ -119,6 +119,10 @@ fn main() {
         let mut wtr = csv::WriterBuilder::new().delimiter(*delimiter).from_path(path).expect("open csv");
         let size = range.get_size();
         println!("** sheet range size is {:?}", size);
+        if size.0 == 0 || size.1 == 0 {
+            eprintln!("worsheet range sizes should not be 0, continue");
+            continue;
+        }
         println!("** start writing", );
         let mut pb = ProgressBar::new(100);
         let rows = range.rows();
