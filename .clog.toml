@@ -1,0 +1,9 @@
+[clog]
+outfile = "CHANGELOG.md"
+from-latest-tag = true
+
+[sections]
+Performance = ["perf"]
+Documentation = ["docs"]
+Deprecations = ["depr"]
+Examples = ["examples"]
