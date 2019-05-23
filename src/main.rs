@@ -3,7 +3,7 @@
 //! # Usage:
 //!
 //! ```text
-//! xlsx2csv 0.1.0
+//! xlsx2csv
 //! Huo Linhe <linhehuo@gmail.com>
 //! Excel XLSX to CSV converter
 //!
@@ -19,7 +19,8 @@
 //!         -d, --delimiter <delimiter>    The field delimiter for reading CSV data.
 //!                                        [default: ,]
 //!         -o, --directory <directory>    Output directory [default: .]
-//!         -s, --sheet <NAME>...          Select sheets
+//!         -s, --sheet <NAME>...          Select sheets by name
+//!         -r, --replace <PREFIX>...      Replace output csv filename, default is sheet name
 //!         -x, --xlsx <xlsx>              Excel file with XLSX format
 //!
 //! ```
@@ -35,8 +36,16 @@
 //! Choose to convert some of worksheets
 //!
 //! ```zsh
+//! # get sheet names
 //! xlsx2csv -S -x test.xlsx
-//! xlsx2csv -x test.xlsx -s sheet1 -s sheet2
+//! #0,sheet1
+//! #1,sheet2
+//! xlsx2csv -x test.xlsx -s sheet1 sheet2
+//! #sheet1.csv
+//! #sheet2.csv
+//! xlsx2csv -x test.xlsx -s sheet1 sheet2 -r foo bar
+//! #foo.csv
+//! #bar.csv
 //! ```
 //!
 //! Output settings:
@@ -53,9 +62,10 @@ extern crate pbr;
 
 use std::path::Path;
 
-use clap::{Arg, App};
-use calamine::Sheets;
+use calamine::{open_workbook, Xlsx};
+use calamine::Reader;
 use calamine::DataType;
+use clap::{Arg, App};
 use pbr::ProgressBar;
 
 fn main() {
@@ -81,6 +91,13 @@ fn main() {
              .help("Select sheets")
              .takes_value(true)
              .multiple(true))
+        .arg(Arg::with_name("replace")
+             .short("r")
+             .long("replace")
+             .value_name("filename")
+             .help("replace selected sheet names")
+             .takes_value(true)
+             .multiple(true))
         .arg(Arg::with_name("directory")
              .short("o")
              .long("directory")
@@ -95,27 +112,32 @@ fn main() {
              .takes_value(true))
         .get_matches();
     let xlsx = matches.value_of("xlsx").unwrap();
-
+    let mut workbook: Xlsx<_> = open_workbook(xlsx).expect("open xlsx file");
+    let sheets = workbook.sheet_names();
+    
     if matches.is_present("sheet_names") {
-        let mut workbook = Sheets::open(xlsx).expect("open xlsx file");
-        for (i, sheet) in workbook.sheet_names().unwrap().iter().enumerate() {
+        for (i, sheet) in workbook.sheet_names().iter().enumerate() {
             println!("{}\t{}", i, sheet);
         }
         return;
     }
-    let mut workbook = Sheets::open(xlsx).expect("open xlsx file");
 
     let sheets: Vec<String>= matches.values_of("sheet")
         .map(|sheet| sheet.map(|s| s.to_string()).collect())
-        .unwrap_or(workbook.sheet_names().unwrap());
+        .unwrap_or(sheets.into_iter().map(Clone::clone).collect());
+    let replaces: Vec<String> = matches.values_of("replace")
+        .map(|sheet| sheet.map(|s| s.to_string()).collect())
+        .unwrap_or(sheets.clone());
+
+    assert_eq!(sheets.len(), replaces.len(), "sheets number must be equal to replaces");
 
     let output = matches.value_of("directory").unwrap();
     let delimiter = matches.value_of("delimiter").unwrap().as_bytes().first().unwrap();
 
-    for sheet in sheets {
-        let path = Path::new(output).join(format!("{}.csv", sheet));
+    for (sheet, replace) in sheets.iter().zip(replaces.iter()) {
+        let path = Path::new(output).join(format!("{}.csv", replace));
         println!("* prepring write to {}", path.display());
-        let range = workbook.worksheet_range(&sheet).expect(&format!("find sheet {}", sheet));
+        let range = workbook.worksheet_range(&sheet).expect(&format!("find sheet {}", sheet)).expect("get range");
         let mut wtr = csv::WriterBuilder::new().delimiter(*delimiter).from_path(path).expect("open csv");
         let size = range.get_size();
         println!("** sheet range size is {:?}", size);
