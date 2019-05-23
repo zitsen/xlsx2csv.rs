@@ -9,10 +9,10 @@ repository = "https://github.com/zitsen/xlsx2csv.rs"
 readme = "README.md"
 
 [dependencies]
-calamine = "0.12.1"
-csv = "1.0.0-beta.5"
-clap = "2.29.2"
-pbr = "1.0.0"
+calamine = "0.15.4"
+csv = "1"
+clap = "2"
+pbr = "1"
 
 [package.metadata.release]
 pre-release-commit-message = "chore(release): release {{version}}"
