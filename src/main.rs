@@ -124,12 +124,10 @@ fn main() {
             continue;
         }
         println!("** start writing", );
-        let mut pb = ProgressBar::new(100);
+        let mut pb = ProgressBar::new(size.0 as _);
         let rows = range.rows();
-        for (i, row) in rows.enumerate() {
-            if i % (size.0 / 100) == 0 {
-                pb.inc();
-            }
+        for row in rows {
+            pb.inc();
             let cols: Vec<String> = row.iter().map(|c| {
                 match *c {
                     DataType::Int(ref c) => format!("{}", c),
