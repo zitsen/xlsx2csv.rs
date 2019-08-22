@@ -2,14 +2,14 @@
 name = "xlsx2csv"
 version = "0.1.4-alpha.0"
 authors = ["Huo Linhe <linhehuo@gmail.com>"]
-description = "Excel XLSX to CSV converter"
+description = "Excel-like sheets to CSV converter"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/zitsen/xlsx2csv.rs"
 repository = "https://github.com/zitsen/xlsx2csv.rs"
 readme = "README.md"
 
 [dependencies]
-calamine = "0.15.4"
+calamine = "0.15.5"
 csv = "1"
 clap = "2"
 pbr = "1"
