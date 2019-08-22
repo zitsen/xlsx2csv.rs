@@ -74,8 +74,6 @@ fn main() {
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("xlsx")
-             .short("x")
-             .long("xlsx")
              .help("Excel file with XLSX format")
              .takes_value(true)
              .required(true))
