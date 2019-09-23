@@ -25,6 +25,17 @@ USAGE:
         -x, --xlsx <xlsx>              Excel file with XLSX format
 
 ```
+## Installation
+
+`cargo install xslx2csv`
+
+To build from source:
+
+```
+git clone https://github.com/zitsen/xlsx2csv.rs
+cd xlsx2csv.rs
+cargo install .
+```
 
 ## Examples
 
