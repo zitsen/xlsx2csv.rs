@@ -76,8 +76,8 @@ fn main() {
         .arg(
             Arg::with_name("xlsx")
                 .help(
-                    "Input Excel like files. Support formats:\n- Excel like: .xls .xlsx .xlsb \
-                     .xlsm .xla .xlam\n- Opendocument spreadsheets: .ods",
+                    "Input Excel-like files. Supports formats:\n- Excel-like: .xls .xlsx .xlsb \
+                     .xlsm .xla .xlam\n- OpenDocument spreadsheets: .ods",
                 )
                 .takes_value(true)
                 .required(true),
@@ -103,7 +103,7 @@ fn main() {
                 .short("r")
                 .long("replace")
                 .value_name("filename")
-                .help("replace selected sheet names")
+                .help("Replace selected sheet names")
                 .takes_value(true)
                 .multiple(true),
         )
@@ -119,7 +119,7 @@ fn main() {
             Arg::with_name("delimiter")
                 .short("d")
                 .long("delimiter")
-                .help("The field delimiter for reading CSV data.")
+                .help("The field delimiter for reading CSV data")
                 .default_value(",")
                 .takes_value(true),
         )
@@ -147,7 +147,7 @@ fn main() {
     assert_eq!(
         sheets.len(),
         replaces.len(),
-        "sheets number must be equal to replaces"
+        "Sheet's number must be equal to replace's"
     );
 
     let output = matches.value_of("output").unwrap();
@@ -161,7 +161,7 @@ fn main() {
 
     for (sheet, replace) in sheets.iter().zip(replaces.iter()) {
         let path = Path::new(output).join(format!("{}.csv", replace));
-        println!("* prepring write to {}", path.display());
+        println!("* Preparing write to {}", path.display());
         let range = workbook
             .worksheet_range(&sheet)
             .expect(&format!("find sheet {}", sheet))
@@ -173,10 +173,10 @@ fn main() {
         let size = range.get_size();
         println!("** sheet range size is {:?}", size);
         if size.0 == 0 || size.1 == 0 {
-            eprintln!("worsheet range sizes should not be 0, continue");
+            eprintln!("Worksheet range sizes should not be 0, continue");
             continue;
         }
-        println!("** start writing",);
+        println!("** Starting writing",);
         let mut pb = ProgressBar::new(if size.0 > 100 { 100 } else { size.0 as _ });
         let rows = range.rows();
         for (i, row) in rows.enumerate() {
@@ -197,7 +197,7 @@ fn main() {
                 .collect();
             wtr.write_record(&cols).unwrap();
         }
-        pb.finish_print(&format!("** done with sheet `{}`", sheet));
+        pb.finish_print(&format!("** Done with sheet `{}`", sheet));
         wtr.flush().unwrap();
     }
 }
