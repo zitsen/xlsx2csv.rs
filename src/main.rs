@@ -59,7 +59,6 @@ extern crate csv;
 #[macro_use]
 extern crate clap;
 extern crate pbr;
-#[macro_use]
 extern crate structopt;
 
 use std::path::Path;
@@ -78,7 +77,9 @@ use std::path::PathBuf;
 struct Opt {
     xlsx: PathBuf,
     outputs: Vec<PathBuf>,
+    #[structopt(short, long)]
     sheet_names: bool,
+    #[structopt(short, long)]
     delimiter: char,
 }
 
