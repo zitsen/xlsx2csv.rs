@@ -13,7 +13,8 @@ pre-release-commit-message = "chore(release): release {{version}}"
 pro-release-commit-message = "chore(dev): start next development iteration {{version}}"
 
 [dependencies]
-calamine = "0.15.5"
+calamine = { version = "0.16.1", features = ["dates"] }
 csv = "1"
 clap = "2"
 pbr = "1"
+structopt = "0.3.17"

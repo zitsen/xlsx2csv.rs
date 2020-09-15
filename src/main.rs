@@ -59,6 +59,8 @@ extern crate csv;
 #[macro_use]
 extern crate clap;
 extern crate pbr;
+#[macro_use]
+extern crate structopt;
 
 use std::path::Path;
 
@@ -67,6 +69,18 @@ use calamine::Reader;
 use calamine::{open_workbook_auto, Sheets};
 use clap::{App, Arg};
 use pbr::ProgressBar;
+
+use structopt::StructOpt;
+use std::path::PathBuf;
+
+/// Commandline parser.
+#[derive(Debug, StructOpt)]
+struct Opt {
+    xlsx: PathBuf,
+    outputs: Vec<PathBuf>,
+    sheet_names: bool,
+    delimiter: char,
+}
 
 fn main() {
     let matches = App::new(crate_name!())
