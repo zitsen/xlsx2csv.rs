@@ -10,7 +10,7 @@ edition = "2018"
 
 [package.metadata.release]
 pre-release-commit-message = "chore(release): release {{version}}"
-pro-release-commit-message = "chore(dev): start next development iteration {{version}}"
+post-release-commit-message = "chore(dev): start next development iteration {{version}}"
 
 [dependencies]
 calamine = { version = "0.16.1", features = ["dates"] }
