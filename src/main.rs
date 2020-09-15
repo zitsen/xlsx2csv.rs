@@ -153,7 +153,7 @@ impl std::str::FromStr for Delimiter {
 struct Opt {
     /// Input Excel-like files, supports: .xls .xlsx .xlsb .xlsm .ods
     xlsx: PathBuf,
-    /// Output each sheet to sperated file.
+    /// Output each sheet to seprated file.
     ///
     /// If not setted, output first sheet to stdout.
     output: Vec<PathBuf>,
@@ -175,7 +175,7 @@ struct Opt {
     /// A regex pattern for matching sheetnames to exclude, used with '-u'.
     #[structopt(short = "X", long, requires = "use-sheet-names")]
     exclude: Option<String>,
-    /// Rgex case insensitivedly.
+    /// Regex case insensitivedly.
     ///
     /// When this flag is provided, the include and exclude patterns will be searched case insensitively. used with '-u'.
     #[structopt(short = "i", long, requires = "use-sheet-names")]

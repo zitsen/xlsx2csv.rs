@@ -108,7 +108,7 @@ FLAGS:
             Prints help information
 
     -i, --ignore-case        
-            Rgex case insensitivedly.
+            Regex case insensitivedly.
             
             When this flag is provided, the include and exclude patterns will be searched case insensitively. used with
             '-u'.
@@ -145,7 +145,7 @@ ARGS:
             Input Excel-like files, supports: .xls .xlsx .xlsb .xlsm .ods
 
     <output>...    
-            Output each sheet to sperated file.
+            Output each sheet to seprated file.
             
             If not setted, output first sheet to stdout.
 ```
