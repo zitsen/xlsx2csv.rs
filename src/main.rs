@@ -1,218 +1,296 @@
-//! xlsx2csv - Excel XLSX to CSV coverter in Rust
-//!
-//! # Usage:
-//!
-//! ```text
-//! xlsx2csv
-//! Huo Linhe <linhehuo@gmail.com>
-//! Excel XLSX to CSV converter
-//!
-//! USAGE:
-//!     xlsx2csv [FLAGS] [OPTIONS] --xlsx <xlsx>
-//!
-//!     FLAGS:
-//!         -h, --help           Prints help information
-//!         -S, --sheet_names    List sheet names if you want to use --sheets option
-//!         -V, --version        Prints version information
-//!
-//!     OPTIONS:
-//!         -d, --delimiter <delimiter>    The field delimiter for reading CSV data.
-//!                                        [default: ,]
-//!         -o, --directory <directory>    Output directory [default: .]
-//!         -s, --sheet <NAME>...          Select sheets by name
-//!         -r, --replace <PREFIX>...      Replace output csv filename, default is sheet name
-//!         -x, --xlsx <xlsx>              Excel file with XLSX format
-//!
-//! ```
-//!
-//! # Examples
-//!
-//! Use it simply, and convert each worksheet to csv file in current directory
-//!
-//! ```zsh
-//! xlsx2csv -x test.xlsx
-//! ```
-//!
-//! Choose to convert some of worksheets
-//!
-//! ```zsh
-//! # get sheet names
-//! xlsx2csv -S -x test.xlsx
-//! #0,sheet1
-//! #1,sheet2
-//! xlsx2csv -x test.xlsx -s sheet1 sheet2
-//! #sheet1.csv
-//! #sheet2.csv
-//! xlsx2csv -x test.xlsx -s sheet1 sheet2 -r foo bar
-//! #foo.csv
-//! #bar.csv
-//! ```
-//!
-//! Output settings:
-//!
-//! ```zsh
-//! xlsx2csv ... --directory /tmp --delimiter '\t'
-//! ```
-//!
-extern crate calamine;
-extern crate csv;
-#[macro_use]
-extern crate clap;
-extern crate pbr;
-extern crate structopt;
-
-use std::path::Path;
-
 use calamine::DataType;
 use calamine::Reader;
 use calamine::{open_workbook_auto, Sheets};
-use clap::{App, Arg};
-use pbr::ProgressBar;
 
-use structopt::StructOpt;
+use std::fmt;
 use std::path::PathBuf;
+use structopt::StructOpt;
 
-/// Commandline parser.
-#[derive(Debug, StructOpt)]
-struct Opt {
-    xlsx: PathBuf,
-    outputs: Vec<PathBuf>,
-    #[structopt(short, long)]
-    sheet_names: bool,
-    #[structopt(short, long)]
-    delimiter: char,
+use regex::RegexBuilder;
+
+/// Select sheet by id or by name.
+#[derive(Clone, Debug)]
+pub enum SheetSelector {
+    ById(usize),
+    ByName(String),
 }
 
-fn main() {
-    let matches = App::new(crate_name!())
-        .about(crate_description!())
-        .version(crate_version!())
-        .author(crate_authors!())
-        .arg(
-            Arg::with_name("xlsx")
-                .help(
-                    "Input Excel-like files. Supports formats:\n- Excel-like: .xls .xlsx .xlsb \
-                     .xlsm .xla .xlam\n- OpenDocument spreadsheets: .ods",
-                )
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("sheet_names")
-                .short("S")
-                .long("sheet_names")
-                .help("List sheet names if you want to use --sheets option")
-                .conflicts_with_all(&["sheets"]),
-        )
-        .arg(
-            Arg::with_name("sheet")
-                .short("s")
-                .long("sheet")
-                .value_name("NAME")
-                .help("Select sheets")
-                .takes_value(true)
-                .multiple(true),
-        )
-        .arg(
-            Arg::with_name("replace")
-                .short("r")
-                .long("replace")
-                .value_name("filename")
-                .help("Replace selected sheet names")
-                .takes_value(true)
-                .multiple(true),
-        )
-        .arg(
-            Arg::with_name("output")
-                .short("o")
-                .long("output")
-                .help("Output directory")
-                .takes_value(true)
-                .default_value("."),
-        )
-        .arg(
-            Arg::with_name("delimiter")
-                .short("d")
-                .long("delimiter")
-                .help("The field delimiter for reading CSV data")
-                .default_value(",")
-                .takes_value(true),
-        )
-        .get_matches();
-    let xlsx = matches.value_of("xlsx").unwrap();
-    let mut workbook: Sheets = open_workbook_auto(xlsx).expect("open file");
-    let sheets = workbook.sheet_names();
+impl SheetSelector {
+    pub fn find_in<'a>(&self, sheetnames: &'a [String]) -> Result<&'a String, String> {
+        match self {
+            SheetSelector::ById(id) => {
+                if *id >= sheetnames.len() {
+                    Err(format!(
+                        "sheet id `{}` is not valid - only **{}** sheets avaliable!",
+                        id,
+                        sheetnames.len()
+                    ))
+                } else {
+                    Ok(&sheetnames[*id])
+                }
+            }
+            SheetSelector::ByName(name) => {
+                if let Some(name) = sheetnames.iter().find(|s| *s == name) {
+                    Ok(name)
+                } else {
+                    let msg = format!(
+                        "sheet name `{}` is not in ({})",
+                        name,
+                        sheetnames.join(", ")
+                    );
+                    Err(msg)
+                }
+            }
+        }
+    }
+}
 
-    if matches.is_present("sheet_names") {
-        for (i, sheet) in workbook.sheet_names().iter().enumerate() {
-            println!("{}\t{}", i, sheet);
+impl std::str::FromStr for SheetSelector {
+    type Err = String;
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        match str.parse() {
+            Ok(id) => Ok(SheetSelector::ById(id)),
+            Err(_) => Ok(SheetSelector::ByName(str.to_string())),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Delimiter(pub u8);
+
+/// Delimiter represents values that can be passed from the command line that
+/// can be used as a field delimiter in CSV data.
+///
+/// Its purpose is to ensure that the Unicode character given decodes to a
+/// valid ASCII character as required by the CSV parser.
+impl Delimiter {
+    pub fn as_byte(&self) -> u8 {
+        self.0
+    }
+    pub fn as_char(&self) -> char {
+        self.0 as char
+    }
+    pub fn to_file_extension(&self) -> String {
+        match self.0 {
+            b'\t' => "tsv".into(),
+            _ => "csv".to_string(),
+        }
+    }
+}
+
+impl fmt::Display for Delimiter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_char())
+    }
+}
+
+impl std::str::FromStr for Delimiter {
+    type Err = String;
+    fn from_str(str: &str) -> Result<Delimiter, Self::Err> {
+        match str {
+            r"\t" => Ok(Delimiter(b'\t')),
+            r"\n" => Ok(Delimiter(b'\n')),
+            s => {
+                if s.len() != 1 {
+                    let msg = format!("Could not convert '{}' to a single ASCII character.", s);
+                    return Err(msg);
+                }
+                let c = s.chars().next().unwrap();
+                if c.is_ascii() {
+                    Ok(Delimiter(c as u8))
+                } else {
+                    let msg = format!("Could not convert '{}' to ASCII delimiter.", c);
+                    Err(msg)
+                }
+            }
+        }
+    }
+}
+
+/// A fast Excel-like spreadsheet to CSV coverter in Rust.
+///
+/// A simple usage like this:
+///
+/// ```
+/// xlsx2csv input.xlsx sheet1.csv sheet2.csv
+/// ```
+///
+/// If no output position args setted, it'll write first sheet to stdout.
+/// So the two commands are equal:
+///
+/// - `xlsx2csv input.xlsx sheet1.csv`
+///
+/// - `xlsx2csv input.xlsx > sheet1.csv`.
+///
+/// If you want to select specific sheet to stdout, use `-s/--select <id or name>` (id is 0-based):
+///
+/// `xlsx2csv input.xlsx -s 1`
+///
+/// In previous command, it'll output the second sheet to stdout.
+///
+/// If there's many sheets that you don't wanna set filename for each,
+/// use `-u` to write with sheetnames.
+///
+/// ```
+/// xlsx2csv input.xlsx -u
+/// ```
+///
+/// If you want to write to directory other than `.`, use `-w/--workdir` along with `-u` option.
+///
+/// ```
+/// xlsx2csv input.xlsx -u -w test/
+/// ```
+///
+/// The filename extension is detemined by delimiter, `,` to `.csv`, `\t` to `.tsv`, others will treat as ','.
+///
+/// By default, it will output all sheets, but if you want to select by sheet names with regex match, use `-I/--include` to include only matching, and `-X/--exclude` to exclude matching.
+/// You could also combine these two option with *include-first-exclude-after* order.
+///
+/// ```
+/// xlsx2csv input.xlsx -I '\S{3,}' -X 'Sheet'
+/// ```
+#[derive(Debug, StructOpt)]
+struct Opt {
+    /// Input Excel-like files, supports: .xls .xlsx .xlsb .xlsm .ods
+    xlsx: PathBuf,
+    /// Output each sheet to sperated file.
+    ///
+    /// If not setted, output first sheet to stdout.
+    output: Vec<PathBuf>,
+    /// List sheet names by id.
+    #[structopt(short, long, conflicts_with_all = &["output", "select", "use_sheet_names"])]
+    list: bool,
+    /// Select sheet by name or id in output, only used when output to stdout.
+    #[structopt(short, long, conflicts_with = "output")]
+    select: Option<SheetSelector>,
+    /// Use sheet names as output filename prefix (in current dir or --workdir).
+    #[structopt(short, long, alias = "sheet", conflicts_with = "output")]
+    use_sheet_names: bool,
+    /// Output files location if `--use-sheet-names` setted
+    #[structopt(short, long, conflicts_with = "output", requires = "use-sheet-names")]
+    workdir: Option<PathBuf>,
+    /// A regex pattern for matching sheetnames to include, used with '-u'.
+    #[structopt(short = "I", long, requires = "use-sheet-names")]
+    include: Option<String>,
+    /// A regex pattern for matching sheetnames to exclude, used with '-u'.
+    #[structopt(short = "X", long, requires = "use-sheet-names")]
+    exclude: Option<String>,
+    /// Rgex case insensitivedly.
+    ///
+    /// When this flag is provided, the include and exclude patterns will be searched case insensitively. used with '-u'.
+    #[structopt(short = "i", long, requires = "use-sheet-names")]
+    ignore_case: bool,
+    /// Delimiter for output.
+    ///
+    /// If `use-sheet-names` setted, it will control the output filename extension: , -> csv, \t -> tsv
+    #[structopt(short, long, default_value = ",")]
+    delimiter: Delimiter,
+}
+
+fn worksheet_to_csv<W: std::io::Write>(
+    workbook: &mut Sheets,
+    sheet: &str,
+    wtr: &mut csv::Writer<W>,
+) {
+    let range = workbook
+        .worksheet_range(&sheet)
+        .expect(&format!("find sheet {}", sheet))
+        .expect("get range");
+    let size = range.get_size();
+    if size.0 == 0 || size.1 == 0 {
+        //panic!("Worksheet range sizes should not be 0, continue");
+        return;
+    }
+    let rows = range.rows();
+    for row in rows {
+        let cols: Vec<String> = row
+            .iter()
+            .map(|c| match *c {
+                DataType::Int(ref c) => format!("{}", c),
+                DataType::Float(ref c) => format!("{}", c),
+                DataType::String(ref c) => format!("{}", c),
+                DataType::Bool(ref c) => format!("{}", c),
+                _ => "".to_string(),
+            })
+            .collect();
+        wtr.write_record(&cols).unwrap();
+    }
+    wtr.flush().unwrap();
+}
+fn main() {
+    let opt = Opt::from_args();
+    let mut workbook: Sheets = open_workbook_auto(&opt.xlsx).expect("open file");
+    let sheetnames = workbook.sheet_names().to_vec();
+    if sheetnames.is_empty() {
+        panic!("input file has zero sheet!");
+    }
+
+    if opt.list {
+        for sheet in sheetnames {
+            println!("{}", sheet);
         }
         return;
     }
 
-    let sheets: Vec<String> = matches
-        .values_of("sheet")
-        .map(|sheet| sheet.map(|s| s.to_string()).collect())
-        .unwrap_or(sheets.into_iter().map(Clone::clone).collect());
-    let replaces: Vec<String> = matches
-        .values_of("replace")
-        .map(|sheet| sheet.map(|s| s.to_string()).collect())
-        .unwrap_or(sheets.clone());
-
-    assert_eq!(
-        sheets.len(),
-        replaces.len(),
-        "Sheet's number must be equal to replace's"
-    );
-
-    let output = matches.value_of("output").unwrap();
-    std::fs::create_dir_all(output).unwrap();
-    let delimiter = matches
-        .value_of("delimiter")
-        .unwrap()
-        .as_bytes()
-        .first()
-        .unwrap();
-
-    for (sheet, replace) in sheets.iter().zip(replaces.iter()) {
-        let path = Path::new(output).join(format!("{}.csv", replace));
-        println!("* Preparing write to {}", path.display());
-        let range = workbook
-            .worksheet_range(&sheet)
-            .expect(&format!("find sheet {}", sheet))
-            .expect("get range");
+    if opt.use_sheet_names {
+        let ignore_case = opt.ignore_case;
+        let include_pattern = opt.include.map(|p| {
+            RegexBuilder::new(&p)
+                .case_insensitive(ignore_case)
+                .build()
+                .unwrap()
+        });
+        let exclude_pattern = opt.exclude.map(|p| {
+            RegexBuilder::new(&p)
+                .case_insensitive(ignore_case)
+                .build()
+                .unwrap()
+        });
+        let ext = opt.delimiter.to_file_extension();
+        let workdir = opt.workdir.unwrap_or(PathBuf::new());
+        for sheet in sheetnames
+            .iter()
+            .filter(|name| {
+                include_pattern
+                    .as_ref()
+                    .map(|r| r.is_match(name))
+                    .unwrap_or(true)
+            })
+            .filter(|name| {
+                exclude_pattern
+                    .as_ref()
+                    .map(|r| !r.is_match(name))
+                    .unwrap_or(true)
+            })
+        {
+            let output = workdir.join(&format!("{}.{}", sheet, ext));
+            println!("{}", output.display());
+            let mut wtr = csv::WriterBuilder::new()
+                .delimiter(opt.delimiter.as_byte())
+                .from_path(output)
+                .expect("open file for output");
+            worksheet_to_csv(&mut workbook, &sheet, &mut wtr);
+        }
+    } else if opt.output.is_empty() {
+        let stdout = std::io::stdout();
         let mut wtr = csv::WriterBuilder::new()
-            .delimiter(*delimiter)
-            .from_path(path)
-            .expect("open csv");
-        let size = range.get_size();
-        println!("** sheet range size is {:?}", size);
-        if size.0 == 0 || size.1 == 0 {
-            eprintln!("Worksheet range sizes should not be 0, continue");
-            continue;
+            .delimiter(opt.delimiter.as_byte())
+            .from_writer(stdout);
+
+        if let Some(select) = opt.select {
+            let name = select.find_in(&sheetnames).expect("invalid selector");
+            worksheet_to_csv(&mut workbook, &name, &mut wtr);
+        } else {
+            worksheet_to_csv(&mut workbook, &sheetnames[0], &mut wtr);
         }
-        println!("** Starting writing",);
-        let mut pb = ProgressBar::new(if size.0 > 100 { 100 } else { size.0 as _ });
-        let rows = range.rows();
-        for (i, row) in rows.enumerate() {
-            if size.0 <= 100 {
-                pb.inc();
-            } else if i % (size.0 / 100) == 0 {
-                pb.inc();
-            }
-            let cols: Vec<String> = row
-                .iter()
-                .map(|c| match *c {
-                    DataType::Int(ref c) => format!("{}", c),
-                    DataType::Float(ref c) => format!("{}", c),
-                    DataType::String(ref c) => format!("{}", c),
-                    DataType::Bool(ref c) => format!("{}", c),
-                    _ => "".to_string(),
-                })
-                .collect();
-            wtr.write_record(&cols).unwrap();
+    } else {
+        for (sheet, output) in sheetnames.iter().zip(opt.output.iter()) {
+            println!("{}", output.display());
+            let mut wtr = csv::WriterBuilder::new()
+                .delimiter(opt.delimiter.as_byte())
+                .from_path(output)
+                .expect("open file for output");
+            worksheet_to_csv(&mut workbook, &sheet, &mut wtr);
         }
-        pb.finish_print(&format!("** Done with sheet `{}`", sheet));
-        wtr.flush().unwrap();
     }
 }

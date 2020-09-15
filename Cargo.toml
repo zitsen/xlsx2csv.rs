@@ -3,10 +3,10 @@ name = "xlsx2csv"
 version = "0.2.1-alpha.0"
 authors = ["Huo Linhe <linhehuo@gmail.com>"]
 description = "Excel-like sheets to CSV converter"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 homepage = "https://github.com/zitsen/xlsx2csv.rs"
 repository = "https://github.com/zitsen/xlsx2csv.rs"
-readme = "README.md"
+edition = "2018"
 
 [package.metadata.release]
 pre-release-commit-message = "chore(release): release {{version}}"
@@ -15,6 +15,6 @@ pro-release-commit-message = "chore(dev): start next development iteration {{ver
 [dependencies]
 calamine = { version = "0.16.1", features = ["dates"] }
 csv = "1"
-clap = "2"
 pbr = "1"
+regex = "1"
 structopt = "0.3.17"
