@@ -97,7 +97,7 @@ The last command line will first include all sheet with pattern '\S{3,}' matched
 
 ## Detailed options
 
-The following is printed by `xlsx2csv -h`
+The following is printed by `xlsx2csv --help`
 
 ```
 USAGE:
@@ -107,6 +107,11 @@ FLAGS:
     -h, --help               
             Prints help information
 
+    -i, --ignore-case        
+            Rgex case insensitivedly.
+            
+            When this flag is provided, the include and exclude patterns will be searched case insensitively. used with
+            '-u'.
     -l, --list               
             List sheet names by id
 
@@ -122,11 +127,17 @@ OPTIONS:
             Delimiter for output.
             
             If `use-sheet-names` setted, it will control the output filename extension: , -> csv, \t -> tsv [default: ,]
+    -X, --exclude <exclude>        
+            A regex pattern for matching sheetnames to exclude, used with '-u'
+
+    -I, --include <include>        
+            A regex pattern for matching sheetnames to include, used with '-u'
+
     -s, --select <select>          
             Select sheet by name or id in output, only used when output to stdout
 
     -w, --workdir <workdir>        
-            Output files location if --use-sheet-names setted
+            Output files location if `--use-sheet-names` setted
 
 
 ARGS:
