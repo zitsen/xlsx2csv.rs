@@ -27,7 +27,7 @@ jobs:
           files: |
             target/release/xlsx2csv_amd64
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-win:
     runs-on: windows-latest
@@ -52,7 +52,7 @@ jobs:
         with:
           files: target/release/xlsx2csv.exe
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-mac:
     runs-on: macos-latest
@@ -79,4 +79,4 @@ jobs:
           files: |
             target/release/xlsx2csv_darwin
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
