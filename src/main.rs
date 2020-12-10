@@ -1,6 +1,6 @@
-use calamine::DataType;
-use calamine::Reader;
-use calamine::{open_workbook_auto, Sheets};
+// use calamine::DataType;
+// use calamine::Reader;
+// use calamine::{open_workbook_auto, Sheets};
 
 use std::fmt;
 use std::path::PathBuf;
@@ -187,40 +187,27 @@ struct Opt {
     delimiter: Delimiter,
 }
 
-fn worksheet_to_csv<W: std::io::Write>(
-    workbook: &mut Sheets,
-    sheet: &str,
-    wtr: &mut csv::Writer<W>,
-) {
-    let range = workbook
-        .worksheet_range(&sheet)
-        .expect(&format!("find sheet {}", sheet))
-        .expect("get range");
-    let size = range.get_size();
-    if size.0 == 0 || size.1 == 0 {
-        //panic!("Worksheet range sizes should not be 0, continue");
-        return;
+fn worksheet_to_csv<W>(workbook: &ooxml::document::Workbook,
+     sheet: &str, wtr: &mut csv::Writer<W>) where W: std::io::Write {
+        let worksheet = workbook
+            .get_worksheet_by_name(&sheet)
+            .expect("worksheet name error");
+        for row in worksheet.rows() {
+            let cols: Vec<String> = row
+                .into_iter()
+                .map(|cell| cell.to_string().unwrap_or_default())
+                .collect();
+            wtr.write_record(&cols).unwrap();
+        }
+        wtr.flush().unwrap();
     }
-    let rows = range.rows();
-    for row in rows {
-        let cols: Vec<String> = row
-            .iter()
-            .map(|c| match *c {
-                DataType::Int(ref c) => format!("{}", c),
-                DataType::Float(ref c) => format!("{}", c),
-                DataType::String(ref c) => format!("{}", c),
-                DataType::Bool(ref c) => format!("{}", c),
-                _ => "".to_string(),
-            })
-            .collect();
-        wtr.write_record(&cols).unwrap();
-    }
-    wtr.flush().unwrap();
-}
 fn main() {
     let opt = Opt::from_args();
-    let mut workbook: Sheets = open_workbook_auto(&opt.xlsx).expect("open file");
-    let sheetnames = workbook.sheet_names().to_vec();
+    let xlsx = ooxml::document::SpreadsheetDocument::open(opt.xlsx).expect("open xlsx file");
+    let workbook = xlsx.get_workbook();
+    //let mut workbook: Sheets = open_workbook_auto(&opt.xlsx).expect("open file");
+    let sheetnames = workbook.worksheet_names();
+
     if sheetnames.is_empty() {
         panic!("input file has zero sheet!");
     }
@@ -269,7 +256,7 @@ fn main() {
                 .delimiter(opt.delimiter.as_byte())
                 .from_path(output)
                 .expect("open file for output");
-            worksheet_to_csv(&mut workbook, &sheet, &mut wtr);
+            worksheet_to_csv(&workbook, &sheet, &mut wtr);
         }
     } else if opt.output.is_empty() {
         let stdout = std::io::stdout();
@@ -279,9 +266,9 @@ fn main() {
 
         if let Some(select) = opt.select {
             let name = select.find_in(&sheetnames).expect("invalid selector");
-            worksheet_to_csv(&mut workbook, &name, &mut wtr);
+            worksheet_to_csv(&workbook, &name, &mut wtr);
         } else {
-            worksheet_to_csv(&mut workbook, &sheetnames[0], &mut wtr);
+            worksheet_to_csv(&workbook, &sheetnames[0], &mut wtr);
         }
     } else {
         for (sheet, output) in sheetnames.iter().zip(opt.output.iter()) {
@@ -290,7 +277,7 @@ fn main() {
                 .delimiter(opt.delimiter.as_byte())
                 .from_path(output)
                 .expect("open file for output");
-            worksheet_to_csv(&mut workbook, &sheet, &mut wtr);
+            worksheet_to_csv(&workbook, &sheet, &mut wtr);
         }
     }
 }

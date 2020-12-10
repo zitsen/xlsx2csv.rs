@@ -13,7 +13,8 @@ pre-release-commit-message = "chore(release): release {{version}}"
 post-release-commit-message = "chore(dev): start next development iteration {{version}}"
 
 [dependencies]
-calamine = { version = "0.16.1", features = ["dates"] }
+#calamine = { version = "0.16.1", features = ["dates"] }
+ooxml = "0.1.2"
 csv = "1"
 pbr = "1"
 regex = "1"
