@@ -14,7 +14,7 @@ post-release-commit-message = "chore(dev): start next development iteration {{ve
 
 [dependencies]
 #calamine = { version = "0.16.1", features = ["dates"] }
-ooxml = "0.1.2"
+ooxml = "0.2.1"
 csv = "1"
 pbr = "1"
 regex = "1"
