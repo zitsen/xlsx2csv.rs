@@ -1,3 +1,13 @@
+<a name=""></a>
+##  (2021-01-17)
+
+
+#### Bug Fixes
+
+*   approve compatiple for older xls format ([a7d36e30](a7d36e30))
+
+
+
 <a name="0.1.2"></a>
 ### 0.1.2 (2019-05-23)
 
