@@ -6,7 +6,7 @@ homepage = "https://github.com/zitsen/xlsx2csv.rs"
 license = "MIT OR Apache-2.0"
 name = "xlsx2csv"
 repository = "https://github.com/zitsen/xlsx2csv.rs"
-version = "0.4.2-alpha.0"
+version = "0.4.2"
 
 [package.metadata.release]
 post-release-commit-message = "chore(dev): start next development iteration {{version}}"
