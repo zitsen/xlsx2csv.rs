@@ -1,21 +1,21 @@
 [package]
-name = "xlsx2csv"
-version = "0.4.2-alpha.0"
 authors = ["Huo Linhe <linhehuo@gmail.com>"]
 description = "Excel-like sheets to CSV converter"
-license = "MIT OR Apache-2.0"
-homepage = "https://github.com/zitsen/xlsx2csv.rs"
-repository = "https://github.com/zitsen/xlsx2csv.rs"
 edition = "2018"
+homepage = "https://github.com/zitsen/xlsx2csv.rs"
+license = "MIT OR Apache-2.0"
+name = "xlsx2csv"
+repository = "https://github.com/zitsen/xlsx2csv.rs"
+version = "0.4.2-alpha.0"
 
 [package.metadata.release]
-pre-release-commit-message = "chore(release): release {{version}}"
 post-release-commit-message = "chore(dev): start next development iteration {{version}}"
+pre-release-commit-message = "chore(release): release {{version}}"
 
 [dependencies]
-#calamine = { version = "0.16.1", features = ["dates"] }
-ooxml = "0.2.1"
+calamine = {version = "0.18", features = ["dates"]}
 csv = "1"
+ooxml = "0.2.4"
 pbr = "1"
 regex = "1"
 structopt = "0.3.17"

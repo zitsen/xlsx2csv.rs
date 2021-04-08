@@ -160,6 +160,9 @@ struct Opt {
     /// List sheet names by id.
     #[structopt(short, long, conflicts_with_all = &["output", "select", "use_sheet_names"])]
     list: bool,
+    /// Use first line as header, which means use first line to select columns
+    #[structopt(short, long)]
+    use_header: bool,
     /// Select sheet by name or id in output, only used when output to stdout.
     #[structopt(short, long, conflicts_with = "output")]
     select: Option<SheetSelector>,
@@ -188,19 +191,39 @@ struct Opt {
 }
 
 fn worksheet_to_csv<W>(workbook: &ooxml::document::Workbook,
-     sheet: &str, wtr: &mut csv::Writer<W>) where W: std::io::Write {
+     sheet: &str, wtr: &mut csv::Writer<W>, header: bool) where W: std::io::Write {
         let worksheet = workbook
             .get_worksheet_by_name(&sheet)
             .expect("worksheet name error");
-        for row in worksheet.rows() {
-            let cols: Vec<String> = row
-                .into_iter()
-                .map(|cell| cell.to_string().unwrap_or_default())
-                .collect();
-            wtr.write_record(&cols).unwrap();
+        let mut iter = worksheet.rows();
+        if header {
+            let header = iter.next();
+            if header.is_none() {
+                return;
+            }
+            let header = header.unwrap();
+            let size = header.into_iter().position(|cell| cell.is_empty()).expect("find header row size");
+
+            for row in worksheet.rows() {
+                let cols: Vec<String> = row
+                    .into_iter()
+                    .take(size)
+                    .map(|cell| cell.to_string().unwrap_or_default())
+                    .collect();
+                wtr.write_record(&cols).unwrap();
+            }
+        } else {
+            for row in worksheet.rows() {
+                let cols: Vec<String> = row
+                    .into_iter()
+                    .map(|cell| cell.to_string().unwrap_or_default())
+                    .collect();
+                wtr.write_record(&cols).unwrap();
+            }
         }
         wtr.flush().unwrap();
     }
+
 fn main() {
     let opt = Opt::from_args();
     let xlsx = ooxml::document::SpreadsheetDocument::open(opt.xlsx).expect("open xlsx file");
@@ -256,7 +279,7 @@ fn main() {
                 .delimiter(opt.delimiter.as_byte())
                 .from_path(output)
                 .expect("open file for output");
-            worksheet_to_csv(&workbook, &sheet, &mut wtr);
+            worksheet_to_csv(&workbook, &sheet, &mut wtr, opt.use_header);
         }
     } else if opt.output.is_empty() {
         let stdout = std::io::stdout();
@@ -266,9 +289,9 @@ fn main() {
 
         if let Some(select) = opt.select {
             let name = select.find_in(&sheetnames).expect("invalid selector");
-            worksheet_to_csv(&workbook, &name, &mut wtr);
+            worksheet_to_csv(&workbook, &name, &mut wtr, opt.use_header);
         } else {
-            worksheet_to_csv(&workbook, &sheetnames[0], &mut wtr);
+            worksheet_to_csv(&workbook, &sheetnames[0], &mut wtr, opt.use_header);
         }
     } else {
         for (sheet, output) in sheetnames.iter().zip(opt.output.iter()) {
@@ -277,7 +300,7 @@ fn main() {
                 .delimiter(opt.delimiter.as_byte())
                 .from_path(output)
                 .expect("open file for output");
-            worksheet_to_csv(&workbook, &sheet, &mut wtr);
+            worksheet_to_csv(&workbook, &sheet, &mut wtr, opt.use_header);
         }
     }
 }
