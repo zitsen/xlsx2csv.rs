@@ -1,3 +1,17 @@
+<a name="v0.4.2"></a>
+## v0.4.2 (2021-04-08)
+
+
+#### Features
+
+*   add use-header options to reparse column size ([21d27332](21d27332))
+
+#### Bug Fixes
+
+* **ci:**  fix changelog generation version error ([03c56c7e](03c56c7e))
+
+
+
 <a name=""></a>
 ##  (2021-01-17)
 
