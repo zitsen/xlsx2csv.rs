@@ -1,3 +1,13 @@
+<a name="v0.4.3"></a>
+## v0.4.3 (2022-04-06)
+
+
+#### Bug Fixes
+
+*   fix builtin number format error ([a8c763ee](a8c763ee))
+
+
+
 <a name="v0.4.2"></a>
 ## v0.4.2 (2021-04-08)
 
