@@ -2,9 +2,9 @@
 // use calamine::Reader;
 // use calamine::{open_workbook_auto, Sheets};
 
+use clap::Parser;
 use std::fmt;
 use std::path::PathBuf;
-use structopt::StructOpt;
 
 use regex::RegexBuilder;
 
@@ -149,7 +149,7 @@ impl std::str::FromStr for Delimiter {
 /// ```
 /// xlsx2csv input.xlsx -I '\S{3,}' -X 'Sheet'
 /// ```
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct Opt {
     /// Input Excel-like files, supports: .xls .xlsx .xlsb .xlsm .ods
     xlsx: PathBuf,
@@ -158,74 +158,83 @@ struct Opt {
     /// If not setted, output first sheet to stdout.
     output: Vec<PathBuf>,
     /// List sheet names by id.
-    #[structopt(short, long, conflicts_with_all = &["output", "select", "use_sheet_names"])]
+    #[clap(short, long, conflicts_with_all = &["output", "select", "use_sheet_names"])]
     list: bool,
     /// Use first line as header, which means use first line to select columns
-    #[structopt(short, long)]
+    #[clap(short, long)]
     use_header: bool,
     /// Select sheet by name or id in output, only used when output to stdout.
-    #[structopt(short, long, conflicts_with = "output")]
+    #[clap(short, long, conflicts_with = "output")]
     select: Option<SheetSelector>,
     /// Use sheet names as output filename prefix (in current dir or --workdir).
-    #[structopt(short, long, alias = "sheet", conflicts_with = "output")]
+    #[clap(short, long, alias = "sheet", conflicts_with = "output")]
     use_sheet_names: bool,
     /// Output files location if `--use-sheet-names` setted
-    #[structopt(short, long, conflicts_with = "output", requires = "use-sheet-names")]
+    #[clap(short, long, conflicts_with = "output", requires = "use-sheet-names")]
     workdir: Option<PathBuf>,
     /// A regex pattern for matching sheetnames to include, used with '-u'.
-    #[structopt(short = "I", long, requires = "use-sheet-names")]
+    #[clap(short = 'I', long, requires = "use-sheet-names")]
     include: Option<String>,
     /// A regex pattern for matching sheetnames to exclude, used with '-u'.
-    #[structopt(short = "X", long, requires = "use-sheet-names")]
+    #[clap(short = 'X', long, requires = "use-sheet-names")]
     exclude: Option<String>,
     /// Regex case insensitivedly.
     ///
     /// When this flag is provided, the include and exclude patterns will be searched case insensitively. used with '-u'.
-    #[structopt(short = "i", long, requires = "use-sheet-names")]
+    #[clap(short = 'i', long, requires = "use-sheet-names")]
     ignore_case: bool,
     /// Delimiter for output.
     ///
     /// If `use-sheet-names` setted, it will control the output filename extension: , -> csv, \t -> tsv
-    #[structopt(short, long, default_value = ",")]
+    #[clap(short, long, default_value = ",")]
     delimiter: Delimiter,
 }
 
-fn worksheet_to_csv<W>(workbook: &ooxml::document::Workbook,
-     sheet: &str, wtr: &mut csv::Writer<W>, header: bool) where W: std::io::Write {
-        let worksheet = workbook
-            .get_worksheet_by_name(&sheet)
-            .expect("worksheet name error");
-        let mut iter = worksheet.rows();
-        if header {
-            let header = iter.next();
-            if header.is_none() {
-                return;
-            }
-            let header = header.unwrap();
-            let size = header.into_iter().position(|cell| cell.is_empty()).expect("find header row size");
-
-            for row in worksheet.rows() {
-                let cols: Vec<String> = row
-                    .into_iter()
-                    .take(size)
-                    .map(|cell| cell.to_string().unwrap_or_default())
-                    .collect();
-                wtr.write_record(&cols).unwrap();
-            }
-        } else {
-            for row in worksheet.rows() {
-                let cols: Vec<String> = row
-                    .into_iter()
-                    .map(|cell| cell.to_string().unwrap_or_default())
-                    .collect();
-                wtr.write_record(&cols).unwrap();
-            }
+fn worksheet_to_csv<W>(
+    workbook: &ooxml::document::Workbook,
+    sheet: &str,
+    wtr: &mut csv::Writer<W>,
+    header: bool,
+) where
+    W: std::io::Write,
+{
+    let worksheet = workbook
+        .get_worksheet_by_name(&sheet)
+        .expect("worksheet name error");
+    let mut iter = worksheet.rows();
+    if header {
+        let header = iter.next();
+        if header.is_none() {
+            return;
         }
-        wtr.flush().unwrap();
+        let header = header.unwrap();
+        let size = header
+            .into_iter()
+            .position(|cell| cell.is_empty())
+            .expect("find header row size");
+
+        for row in worksheet.rows() {
+            let cols: Vec<String> = row
+                .into_iter()
+                .take(size)
+                .map(|cell| cell.to_string().unwrap_or_default())
+                .collect();
+            wtr.write_record(&cols).unwrap();
+        }
+    } else {
+        for row in worksheet.rows() {
+            let cols: Vec<String> = row
+                .into_iter()
+                .map(|cell| cell.to_string().unwrap_or_default())
+                .collect();
+            wtr.write_record(&cols).unwrap();
+        }
     }
+    wtr.flush().unwrap();
+}
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     let xlsx = ooxml::document::SpreadsheetDocument::open(opt.xlsx).expect("open xlsx file");
     let workbook = xlsx.get_workbook();
     //let mut workbook: Sheets = open_workbook_auto(&opt.xlsx).expect("open file");
