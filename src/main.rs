@@ -158,18 +158,18 @@ struct Opt {
     /// If not setted, output first sheet to stdout.
     output: Vec<PathBuf>,
     /// List sheet names by id.
-    #[clap(short, long, conflicts_with_all = &["output", "select", "use_sheet_names"])]
+    #[clap(short, long, conflicts_with_all = &["output", "select", "use-sheet-names"])]
     list: bool,
     /// Use first line as header, which means use first line to select columns
-    #[clap(short, long)]
+    #[clap(short = 'U', long)]
     use_header: bool,
     /// Select sheet by name or id in output, only used when output to stdout.
     #[clap(short, long, conflicts_with = "output")]
     select: Option<SheetSelector>,
     /// Use sheet names as output filename prefix (in current dir or --workdir).
-    #[clap(short, long, alias = "sheet", conflicts_with = "output")]
+    #[clap(short, long, alias = "sheet", conflicts_with = "output", id = "use-sheet-names")]
     use_sheet_names: bool,
-    /// Output files location if `--use-sheet-names` setted
+    /// Output files location if `--use_sheet_names` setted
     #[clap(short, long, conflicts_with = "output", requires = "use-sheet-names")]
     workdir: Option<PathBuf>,
     /// A regex pattern for matching sheetnames to include, used with '-u'.
@@ -185,7 +185,7 @@ struct Opt {
     ignore_case: bool,
     /// Delimiter for output.
     ///
-    /// If `use-sheet-names` setted, it will control the output filename extension: , -> csv, \t -> tsv
+    /// If `use_sheet_names` setted, it will control the output filename extension: , -> csv, \t -> tsv
     #[clap(short, long, default_value = ",")]
     delimiter: Delimiter,
 }
