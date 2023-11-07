@@ -9,7 +9,7 @@ repository = "https://github.com/zitsen/xlsx2csv.rs"
 description = "Excel-like sheets to CSV converter"
 
 [package.metadata.release]
-post-release-commit-message = "chore(dev): start next development iteration {{version}}"
+#post-release-commit-message = "chore(dev): start next development iteration {{version}}"
 pre-release-commit-message = "chore(release): release {{version}}"
 
 [dependencies]
