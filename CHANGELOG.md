@@ -1,3 +1,13 @@
+<a name="v0.4.5"></a>
+## v0.4.5 (2023-11-07)
+
+
+#### Bug Fixes
+
+*   the same flag with user-header/use-sheet-names ([2824b0ea](2824b0ea))
+
+
+
 <a name="v0.4.4"></a>
 ## v0.4.4 (2023-11-07)
 
