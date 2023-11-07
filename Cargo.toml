@@ -1,6 +1,6 @@
 [package]
 name = "xlsx2csv"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Huo Linhe <linhehuo@gmail.com>"]
 edition = "2018"
 homepage = "https://github.com/zitsen/xlsx2csv.rs"
